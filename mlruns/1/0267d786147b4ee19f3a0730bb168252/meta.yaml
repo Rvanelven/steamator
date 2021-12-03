@@ -1,0 +1,15 @@
+artifact_uri: file:///home/rvanelven/code/Rvanelven/steamator/mlruns/1/0267d786147b4ee19f3a0730bb168252/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: active
+name: ''
+run_id: 0267d786147b4ee19f3a0730bb168252
+run_uuid: 0267d786147b4ee19f3a0730bb168252
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1638520454868
+status: 1
+tags: []
+user_id: unknown
