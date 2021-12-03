@@ -143,8 +143,18 @@ gcp_submit_training:
 		--region ${REGION} \
 		--stream-logs
 
+run_api:
+	@uvicorn api.simple:app --reload  # load web server with code autoreload
+
+# build the app
+docker_build:
+	@docker build -t steamator .
+
+# run the app locally
 docker_run:
 	@docker run -it -e PORT=8000 -p 8000:8000 steamator
 
-docker_stop:
-	@docker stop $(shell docker ps | grep api | grep -E -o '[0-9a-zA-Z]{12}')
+deploy_api:
+	@docker build -t eu.gcr.io/$PROJECT_ID/$DOCKER_IMAGE_NAME .
+	@docker push eu.gcr.io/$PROJECT_ID/$DOCKER_IMAGE_NAME
+	@gcloud run deploy --image eu.gcr.io/$PROJECT_ID/$DOCKER_IMAGE_NAME --platform managed --region europe-west1
