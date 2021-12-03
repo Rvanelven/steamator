@@ -2,9 +2,12 @@ from steamator.data import get_data, clean_data
 from steamator.utils import compute_rmse
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import Ridge, Lasso, LinearRegression
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, StackingRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
+from sklearn.pipeline import make_pipeline
 from google.cloud import storage
 import pandas as pd
 import numpy as np
@@ -57,20 +60,19 @@ class Trainer():
 
         #TO DO
     def set_pipeline(self):
-        genre_pipe = Pipeline(OneHotEncoder(handle_unknown='ignore')
-                                        )
-
-        preproc_pipe = ColumnTransformer([
-            ('genre', genre_pipe)
-        ])
-
-
-        self.pipeline = Pipeline([
-            ('preproc', preproc_pipe),
-            ('linear_model', LinearRegression()),
-            #("lasso", Lasso()),
-          ])
-
+        forest = RandomForestRegressor(n_estimators=100, max_leaf_nodes=1000, max_depth=50)
+        KNN = KNeighborsRegressor(n_neighbors=10)
+        lasso = Lasso(max_iter=5000,positive=True, fit_intercept=False, )
+        GBR = GradientBoostingRegressor(
+                    n_estimators=100,
+                    learning_rate=0.1,
+                    max_depth=3)
+        ensemble = StackingRegressor(estimators=[('GBR', GBR),
+                                                 ("lasso", lasso),
+                                                 ('forest', forest)],
+                                     final_estimator=lasso,
+                                     n_jobs=-1)
+        self.pipeline = make_pipeline(ensemble)
 
     def run(self):
         """set and train the pipeline"""
@@ -110,7 +112,12 @@ def get_data():
 
 def preprocess(df):
     """method that pre-process the data"""
-    X_train = df.drop(columns=['owner_median', 'steam_appid',  'name', 'steamspy_tags', 'release_date', 'developer', 'publisher', 'platforms', 'categories', 'owners', 'detailed_description','about_the_game','short_description','header_image','screenshots','background'])
+    X_train = df.drop(columns=[
+        "steam_appid", "name", "top_5_tags", "nb_review", "owner_estimated",
+        "rating", "popularity",
+        "average_playtime",
+        "median_playtime"
+    ])
     y_train = df['owner_median']
     return X_train, y_train
 
