@@ -2,7 +2,7 @@ from steamator.data import get_data, clean_data
 from steamator.utils import compute_rmse
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import Ridge, Lasso, LinearRegression
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, StackingRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
@@ -60,6 +60,7 @@ class Trainer():
 
         #TO DO
     def set_pipeline(self):
+        print("setting the pipeline...")
         forest = RandomForestRegressor(n_estimators=100, max_leaf_nodes=1000, max_depth=50)
         KNN = KNeighborsRegressor(n_neighbors=10)
         lasso = Lasso(max_iter=5000,positive=True, fit_intercept=False, )
@@ -67,17 +68,20 @@ class Trainer():
                     n_estimators=100,
                     learning_rate=0.1,
                     max_depth=3)
-        ensemble = StackingRegressor(estimators=[('GBR', GBR),
-                                                 ("lasso", lasso),
-                                                 ('forest', forest)],
-                                     final_estimator=lasso,
-                                     n_jobs=-1)
-        self.pipeline = make_pipeline(ensemble)
+        # #ensemble = StackingRegressor(estimators=[('GBR', GBR),
+        #                                          ("lasso", lasso),
+        #                                          ('forest', forest)],
+        #                              final_estimator=lasso,
+        #                              n_jobs=-1)
+        self.pipeline = make_pipeline(forest)
+        print("pipeline done")
 
     def run(self):
         """set and train the pipeline"""
         self.set_pipeline()
+        print("training the model")
         self.pipeline.fit(self.X, self.y)
+        print("training done")
 
     def evaluate(self, X_test, y_test):
         """evaluates the pipeline on df_test and return the RMSE"""
@@ -85,13 +89,13 @@ class Trainer():
         rmse = compute_rmse(y_pred, y_test)
         return round(rmse, 2)
 
-    def save_model(self, reg):
+    def save_model(self):
         """method that saves the model into a .joblib file and uploads it on Google Storage /models folder
         HINTS : use joblib library and google-cloud-storage"""
 
         # saving the trained model to disk is mandatory to then beeing able to upload it to storage
         # Implement here
-        joblib.dump(reg, 'model.joblib')
+        joblib.dump(self.pipeline, 'model.joblib')
         print("saved model.joblib locally")
 
         # Implement here
@@ -118,7 +122,7 @@ def preprocess(df):
         "average_playtime",
         "median_playtime"
     ])
-    y_train = df['owner_median']
+    y_train = df['owner_estimated']
     return X_train, y_train
 
 

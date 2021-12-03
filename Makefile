@@ -142,3 +142,9 @@ gcp_submit_training:
 		--runtime-version=${RUNTIME_VERSION} \
 		--region ${REGION} \
 		--stream-logs
+
+docker_run:
+	@docker run -it -e PORT=8000 -p 8000:8000 steamator
+
+docker_stop:
+	@docker stop $(shell docker ps | grep api | grep -E -o '[0-9a-zA-Z]{12}')
