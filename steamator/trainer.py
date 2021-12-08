@@ -1,13 +1,12 @@
 from steamator.data import get_data, clean_data
 from steamator.utils import compute_rmse
-from sklearn.compose import ColumnTransformer
-from sklearn.linear_model import Ridge, Lasso, LinearRegression
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 from sklearn.pipeline import make_pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.compose import make_column_transformer, make_column_selector
 from google.cloud import storage
 import pandas as pd
 import numpy as np
@@ -49,38 +48,39 @@ MODEL_VERSION = 'v1'
 # not required here
 
 class Trainer():
-    def __init__(self, X, y):
+    def __init__(self, X_train, X_test, y_train, y_test):
         """
             X: pandas DataFrame
             y: pandas Series
         """
         self.pipeline = None
-        self.X = X
-        self.y = y
+        self.X_train = X_train
+        self.X_test = X_test
+        self.y_train = y_train
+        self.y_test = y_test
 
-        #TO DO
     def set_pipeline(self):
         print("setting the pipeline...")
-        forest = RandomForestRegressor(n_estimators=100, max_leaf_nodes=1000, max_depth=50)
-        KNN = KNeighborsRegressor(n_neighbors=10)
-        lasso = Lasso(max_iter=5000,positive=True, fit_intercept=False, )
-        GBR = GradientBoostingRegressor(
-                    n_estimators=100,
-                    learning_rate=0.1,
-                    max_depth=3)
-        # #ensemble = StackingRegressor(estimators=[('GBR', GBR),
-        #                                          ("lasso", lasso),
-        #                                          ('forest', forest)],
-        #                              final_estimator=lasso,
-        #                              n_jobs=-1)
-        self.pipeline = make_pipeline(forest)
+        num_transformer = make_pipeline(SimpleImputer(), StandardScaler())
+        cat_transformer = OneHotEncoder()
+        preproc = make_column_transformer(
+            (num_transformer, make_column_selector(dtype_include=['float64'])),
+            (cat_transformer,
+             make_column_selector(dtype_include=['object', 'bool'])),
+            remainder='passthrough')
+        model = RandomForestRegressor(bootstrap=True,
+                                       max_features=0.4,
+                                       min_samples_leaf=14,
+                                       n_estimators=100,
+                                       min_samples_split=14)
+        self.pipeline = make_pipeline(preproc, model)
         print("pipeline done")
 
     def run(self):
         """set and train the pipeline"""
         self.set_pipeline()
         print("training the model")
-        self.pipeline.fit(self.X, self.y)
+        self.pipeline.fit(self.X_train, self.y_train)
         print("training done")
 
     def evaluate(self, X_test, y_test):
@@ -116,14 +116,15 @@ def get_data():
 
 def preprocess(df):
     """method that pre-process the data"""
-    X_train = df.drop(columns=[
-        "steam_appid", "name", "top_5_tags", "nb_review", "owner_estimated",
-        "rating", "popularity",
-        "average_playtime",
-        "median_playtime"
-    ])
-    y_train = df['owner_estimated']
-    return X_train, y_train
+    X= df.drop(columns=['best_topic','steam_appid', 'name','top_5_tags',
+                               'developer', 'publisher', 'owner_estimated',
+                               'ratio', 'nb_review', 'sells_per_days', 'indé',
+                               'nb_game_by_publisher',
+                               'is_a_remake', '0', '1', '2', '3', '4' ])
+    y = df["owner_estimated"]
+    X = pd.DataFrame(X)
+    X_train, X_test, y_train, y_test = train_test_split(X,y,test_size = 0.3)
+    return X_train, y_train, X_test, y_test
 
 
 STORAGE_LOCATION = 'models/steamator/model.joblib'
