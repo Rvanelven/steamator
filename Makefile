@@ -61,7 +61,7 @@ pypi:
 # ----------------------------------
 #      SECTION GCP SETUP
 # ----------------------------------
-LOCAL_PATH=raw_data/data_final.csv
+LOCAL_PATH=raw_data/data_final_indé_medium3.csv
 
 # project id
 PROJECT_ID=le-wagon-data-bootcamp-328620

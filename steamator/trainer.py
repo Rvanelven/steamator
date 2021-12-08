@@ -1,4 +1,5 @@
 from steamator.data import get_data, clean_data
+from steamator.nlp_trainer import nlp_model_tags
 from steamator.utils import compute_rmse
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.pipeline import Pipeline
@@ -29,7 +30,7 @@ BUCKET_NAME = 'wagon-data-770-vanelven'
 # train data file location
 # /!\ here you need to decide if you are going to train using the provided and uploaded data/train_1k.csv sample file
 # or if you want to use the full dataset (you need need to upload it first of course)
-BUCKET_TRAIN_DATA_PATH = 'data/data_final.csv'
+BUCKET_TRAIN_DATA_PATH = 'data/data_final_indé_medium3.csv'
 
 ##### Training  - - - - - - - - - - - - - - - - - - - - - -
 
@@ -109,7 +110,9 @@ class Trainer():
         blob.upload_from_filename('model.joblib')
 
 
-def get_data():
+
+
+def get_data_gcp():
     """method to get the training data (or a portion of it) from google cloud bucket"""
     df = pd.read_csv(f"gs://{BUCKET_NAME}/{BUCKET_TRAIN_DATA_PATH}")
     return df
@@ -131,15 +134,16 @@ STORAGE_LOCATION = 'models/steamator/model.joblib'
 
 if __name__ == '__main__':
     # get training data from GCP bucket
-    df = get_data()
+    df = get_data_gcp()
+    df = nlp_model_tags()
 
     # preprocess data
-    X_train, y_train = preprocess(df)
+    X_train, y_train, X_test, y_test = preprocess(df)
 
     # train model (locally if this file was called through the run_locally command
     # or on GCP if it was called through the gcp_submit_training, in which case
     # this package is uploaded to GCP before being executed)
-    trainer = Trainer(X_train, y_train)
+    trainer = Trainer(X_train, y_train, X_test, y_test)
 
     trainer.run()
     # rmse = trainer.evaluate(X_test, y_test)

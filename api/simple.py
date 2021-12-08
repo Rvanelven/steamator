@@ -23,10 +23,6 @@ app.add_middleware(
 @app.get("/")
 def predict(price: int, tags: str, short_desc: str, english: bool, has_a_website: bool, followers: int, nb_game_by_developer: int):
 
-    #NLP des tags
-    tag_array = json.loads(tags)
-    vectorized_tags = vectorizer.transform(tag_array)
-
     # TODO: import model class and make it work !
     # TODO: preprocess the description to get the score
     # TODO: make a predict with tags, desc_score, price
