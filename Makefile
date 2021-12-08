@@ -1,3 +1,5 @@
+include .env
+export
 # ----------------------------------
 #          INSTALL & TEST
 # ----------------------------------
@@ -59,7 +61,7 @@ pypi:
 # ----------------------------------
 #      SECTION GCP SETUP
 # ----------------------------------
-LOCAL_PATH=raw_data/data_final.csv
+LOCAL_PATH=raw_data/data_final_indé_medium3.csv
 
 # project id
 PROJECT_ID=le-wagon-data-bootcamp-328620
@@ -155,6 +157,9 @@ docker_run:
 	@docker run -it -e PORT=8000 -p 8000:8000 steamator
 
 deploy_api:
-	@docker build -t eu.gcr.io/$PROJECT_ID/$DOCKER_IMAGE_NAME .
-	@docker push eu.gcr.io/$PROJECT_ID/$DOCKER_IMAGE_NAME
-	@gcloud run deploy --image eu.gcr.io/$PROJECT_ID/$DOCKER_IMAGE_NAME --platform managed --region europe-west1
+	@docker build -t eu.gcr.io/${PROJECT_ID}/${DOCKER_IMAGE_NAME} .
+	@docker push eu.gcr.io/${PROJECT_ID}/${DOCKER_IMAGE_NAME}
+	@gcloud run deploy --image eu.gcr.io/${PROJECT_ID}/${DOCKER_IMAGE_NAME} --platform managed --region europe-west1
+
+test_env:
+	@echo ${PROJECT_ID}
