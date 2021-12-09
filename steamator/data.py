@@ -7,7 +7,7 @@ from google.cloud import storage
 
 def get_data():
     ''' returns a DataFrame '''
-    df =pd.read_csv('../raw_data/data_final_indé_medium3.csv')
+    df =pd.read_csv('raw_data/data_final_final_final.csv')
     return df
 
 def clean_data(df):
