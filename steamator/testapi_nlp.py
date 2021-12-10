@@ -7,7 +7,7 @@ import json
 
 url_nlp = "https://storage.googleapis.com/wagon-data-770-vanelven/models/steamator/nlpmodel.joblib"
 url_vectorized_nlp = "https://storage.googleapis.com/wagon-data-770-vanelven/models/steamator/nlpvectorizermodel.joblib"
-# tags_string = "['action', 'drama', 'golf', 'movie', 'ninja']"
+tags_string = "['action', 'drama', 'golf', 'movie', 'ninja']"
 
 io = StringIO('["action", "drama", "golf", "movie", "ninja"]')
 
@@ -23,8 +23,10 @@ response_vectorized_nlp = requests.get(url_vectorized_nlp).content
 mfile_vectorized_nlp = BytesIO(response_vectorized_nlp)
 model_vectorized_nlp = joblib.load(mfile_vectorized_nlp)
 
-tags_vectorized = model_vectorized_nlp.transform(tags_list)
+tags_vectorized = model_vectorized_nlp.transform([' '.join(tags_list)])
+print(tags_vectorized)
 topic_proba_tags = model_nlp.transform(tags_vectorized)
+print(topic_proba_tags)
 topic_proba_tags = [item for sublist in topic_proba_tags for item in sublist]
 
 topic_proba_dict = dict(

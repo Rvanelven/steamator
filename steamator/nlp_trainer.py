@@ -8,6 +8,8 @@ from sklearn.pipeline import make_pipeline
 
 BUCKET_NAME = 'wagon-data-770-vanelven'
 BUCKET_TRAIN_DATA_PATH = 'data/data_final_final_final.csv'
+BUCKET_TRAIN_DATA_START_PATH = 'data/data_final_final_final.csv'
+
 MODEL_NAME = 'steamator'
 MODEL_VERSION = 'v1'
 STORAGE_LOCATION_NLP = 'models/steamator/nlpmodel.joblib'
@@ -28,26 +30,31 @@ class TrainerNlp():
         print("pipeline done")
 
     def get_list_of_topics(self):
-        df = get_data_gcp()
+        df = get_data_start_gcp()
         print('dataframe created from csv..')
         list_of_tags = df['top_5_tags'].tolist()
         self.vectorizer = TfidfVectorizer().fit(list_of_tags)
         self.data_vectorized = self.vectorizer.transform(list_of_tags)
 
-        print(self.data_vectorized)
-
     def run(self):
-        """set the pipeline"""
+        print("setting the pipeline...")
         self.set_pipeline_nlp()
-        """ get the vectorized data """
+        print("pipeline done")
+
         self.get_list_of_topics()
-        print("training the model")
+        print('dataframe created from csv..')
+        self.nlp_model_tags()
+        print("transforming the tags into proba of topics...")
+        print("start of the training of the model...")
+        #self.pipeline.fit(self.data_vectorized)
+        print("training done...")
+
+    def nlp_model_tags(self):
+        df = get_data_start_gcp()
+        print("transforming the tags into proba of topics...")
         self.pipeline.fit(self.data_vectorized)
-        print("training done")
-
-    def nlp_model_tags(self, df):
-
-        nlp_vectors = self.pipeline.transform(df['top_5_tags'])
+        df_top_5_vectorized= self.vectorizer.transform(df['top_5_tags'])
+        nlp_vectors = self.pipeline.transform(df_top_5_vectorized)
         df_with_20_probas = pd.DataFrame(data=nlp_vectors)
         df_with_20_probas = df_with_20_probas.rename(
             columns={
@@ -73,7 +80,9 @@ class TrainerNlp():
                 19: "topic_19"
             })
         df = df.join(df_with_20_probas)
-        return df
+        df.to_csv(r'last_data.csv', index=False)
+
+        # TODO upload the new df on GCP with same address
 
     # #def evaluate(self, X_test, y_test):
     #     """evaluates the pipeline on df_test and return the RMSE"""
@@ -124,6 +133,12 @@ class TrainerNlp():
         blob.upload_from_filename('nlpvectorizedmodel.joblib')
 
 
+def get_data_start_gcp():
+    """method to get the training data (or a portion of it) from google cloud bucket"""
+    df = pd.read_csv(f"gs://{BUCKET_NAME}/{BUCKET_TRAIN_DATA_START_PATH}")
+    return df
+
+
 def get_data_gcp():
     """method to get the training data (or a portion of it) from google cloud bucket"""
     df = pd.read_csv(f"gs://{BUCKET_NAME}/{BUCKET_TRAIN_DATA_PATH}")
@@ -139,9 +154,12 @@ if __name__ == '__main__':
     # or on GCP if it was called through the gcp_submit_training, in which case
     # this package is uploaded to GCP before being executed)
     trainer_nlp = TrainerNlp()
-
+    #trainer_nlp.set_pipeline_nlp()
+    #trainer_nlp.get_list_of_topics()
     trainer_nlp.run()
-    # rmse = trainer.evaluate(X_test, y_test)
-    # save trained model to GCP bucket (whether the training occured locally or on GCP)
+    #trainer_nlp.nlp_model_tags()
+
+
+    # # save trained model to GCP bucket (whether the training occured locally or on GCP)
     trainer_nlp.save_model_nlp()
     trainer_nlp.save_model_nlp_vectorized()

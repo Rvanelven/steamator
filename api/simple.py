@@ -26,9 +26,6 @@ def predict_tags(tags: str):
     io = StringIO(tags)
     tags_list = json.load(io)
 
-    print(tags)
-    print(tags_list)
-
     url_nlp = "https://storage.googleapis.com/wagon-data-770-vanelven/models/steamator/nlpmodel.joblib"
     url_vectorized_nlp = "https://storage.googleapis.com/wagon-data-770-vanelven/models/steamator/nlpvectorizermodel.joblib"
 
@@ -46,7 +43,7 @@ def predict_tags(tags: str):
 
     print("using both models...")
     print('vectorising tag list...')
-    tags_vectorized = model_vectorized_nlp.transform(tags_list)
+    tags_vectorized = model_vectorized_nlp.transform([' '.join(tags_list)])
     print("transforming nlp")
     topic_proba_tags = model_nlp.transform(tags_vectorized)
     print("flatening result...")
