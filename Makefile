@@ -61,7 +61,7 @@ pypi:
 # ----------------------------------
 #      SECTION GCP SETUP
 # ----------------------------------
-LOCAL_PATH=raw_data/data_final_indé_medium3.csv
+LOCAL_PATH=raw_data/last_data.csv
 
 # project id
 PROJECT_ID=le-wagon-data-bootcamp-328620
@@ -126,6 +126,7 @@ RUNTIME_VERSION=1.15
 
 PACKAGE_NAME=steamator
 FILENAME=trainer
+FILENAME_NLP=nlp_trainer
 
 ##### Job - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -134,6 +135,9 @@ JOB_NAME=steamator_training_pipeline_$(shell date +'%Y%m%d_%H%M%S')
 
 run_locally:
 	@python -m ${PACKAGE_NAME}.${FILENAME}
+
+run_nlp_locally:
+	@python -m ${PACKAGE_NAME}.${FILENAME_NLP}
 
 gcp_submit_training:
 	gcloud ai-platform jobs submit training ${JOB_NAME} \

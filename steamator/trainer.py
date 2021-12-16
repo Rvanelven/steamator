@@ -1,5 +1,4 @@
-from steamator.data import get_data, clean_data
-from steamator.nlp_trainer import nlp_model_tags
+# from steamator.data import get_data, clean_data
 from steamator.utils import compute_rmse
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.pipeline import Pipeline
@@ -30,7 +29,7 @@ BUCKET_NAME = 'wagon-data-770-vanelven'
 # train data file location
 # /!\ here you need to decide if you are going to train using the provided and uploaded data/train_1k.csv sample file
 # or if you want to use the full dataset (you need need to upload it first of course)
-BUCKET_TRAIN_DATA_PATH = 'data/data_final_indé_medium3.csv'
+BUCKET_TRAIN_DATA_PATH = 'data/last_data.csv'
 
 ##### Training  - - - - - - - - - - - - - - - - - - - - - -
 
@@ -62,12 +61,9 @@ class Trainer():
 
     def set_pipeline(self):
         print("setting the pipeline...")
-        num_transformer = make_pipeline(SimpleImputer(), StandardScaler())
-        cat_transformer = OneHotEncoder()
+        num_transformer = make_pipeline(StandardScaler())
         preproc = make_column_transformer(
             (num_transformer, make_column_selector(dtype_include=['float64'])),
-            (cat_transformer,
-             make_column_selector(dtype_include=['object', 'bool'])),
             remainder='passthrough')
         model = RandomForestRegressor(bootstrap=True,
                                        max_features=0.4,
@@ -119,14 +115,14 @@ def get_data_gcp():
 
 def preprocess(df):
     """method that pre-process the data"""
-    X= df.drop(columns=['best_topic','steam_appid', 'name','top_5_tags',
-                               'developer', 'publisher', 'owner_estimated',
-                               'ratio', 'nb_review', 'sells_per_days', 'indé',
-                               'nb_game_by_publisher',
-                               'is_a_remake', '0', '1', '2', '3', '4' ])
-    y = df["owner_estimated"]
+    X= df.drop(columns=['steam_appid', 'top_5_tags',
+                                'owner_estimated',
+                                'nb_review', 'target'
+
+                               ])
+    y = df["target"]
     X = pd.DataFrame(X)
-    X_train, X_test, y_train, y_test = train_test_split(X,y,test_size = 0.3)
+    X_train, y_train, X_test, y_test = train_test_split(X,y,test_size = 0.3)
     return X_train, y_train, X_test, y_test
 
 
@@ -135,7 +131,6 @@ STORAGE_LOCATION = 'models/steamator/model.joblib'
 if __name__ == '__main__':
     # get training data from GCP bucket
     df = get_data_gcp()
-    df = nlp_model_tags()
 
     # preprocess data
     X_train, y_train, X_test, y_test = preprocess(df)
@@ -149,14 +144,3 @@ if __name__ == '__main__':
     # rmse = trainer.evaluate(X_test, y_test)
     # save trained model to GCP bucket (whether the training occured locally or on GCP)
     trainer.save_model()
-
-#if __name__ == "__main__":
-# df=get_data()
-# df = clean_data(df)
-# y=df["owner_median"]
-# X = df.drop('owner_median', axis=1)
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
-# trainer = Trainer(X_train, y_train)
-# trainer.run()
-# rmse = trainer.evaluate(X_test, y_test)
-# print(f"rmse: {rmse}")
