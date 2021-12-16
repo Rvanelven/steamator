@@ -1,13 +1,12 @@
-from steamator.data import get_data, clean_data
+# from steamator.data import get_data, clean_data
 from steamator.utils import compute_rmse
-from sklearn.compose import ColumnTransformer
-from sklearn.linear_model import Ridge, Lasso, LinearRegression
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 from sklearn.pipeline import make_pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.compose import make_column_transformer, make_column_selector
 from google.cloud import storage
 import pandas as pd
 import numpy as np
@@ -30,7 +29,7 @@ BUCKET_NAME = 'wagon-data-770-vanelven'
 # train data file location
 # /!\ here you need to decide if you are going to train using the provided and uploaded data/train_1k.csv sample file
 # or if you want to use the full dataset (you need need to upload it first of course)
-BUCKET_TRAIN_DATA_PATH = 'data/data_final.csv'
+BUCKET_TRAIN_DATA_PATH = 'data/last_data.csv'
 
 ##### Training  - - - - - - - - - - - - - - - - - - - - - -
 
@@ -49,38 +48,36 @@ MODEL_VERSION = 'v1'
 # not required here
 
 class Trainer():
-    def __init__(self, X, y):
+    def __init__(self, X_train, X_test, y_train, y_test):
         """
             X: pandas DataFrame
             y: pandas Series
         """
         self.pipeline = None
-        self.X = X
-        self.y = y
+        self.X_train = X_train
+        self.X_test = X_test
+        self.y_train = y_train
+        self.y_test = y_test
 
-        #TO DO
     def set_pipeline(self):
         print("setting the pipeline...")
-        forest = RandomForestRegressor(n_estimators=100, max_leaf_nodes=1000, max_depth=50)
-        KNN = KNeighborsRegressor(n_neighbors=10)
-        lasso = Lasso(max_iter=5000,positive=True, fit_intercept=False, )
-        GBR = GradientBoostingRegressor(
-                    n_estimators=100,
-                    learning_rate=0.1,
-                    max_depth=3)
-        # #ensemble = StackingRegressor(estimators=[('GBR', GBR),
-        #                                          ("lasso", lasso),
-        #                                          ('forest', forest)],
-        #                              final_estimator=lasso,
-        #                              n_jobs=-1)
-        self.pipeline = make_pipeline(forest)
+        num_transformer = make_pipeline(StandardScaler())
+        preproc = make_column_transformer(
+            (num_transformer, make_column_selector(dtype_include=['float64'])),
+            remainder='passthrough')
+        model = RandomForestRegressor(bootstrap=True,
+                                       max_features=0.4,
+                                       min_samples_leaf=14,
+                                       n_estimators=100,
+                                       min_samples_split=14)
+        self.pipeline = make_pipeline(preproc, model)
         print("pipeline done")
 
     def run(self):
         """set and train the pipeline"""
         self.set_pipeline()
         print("training the model")
-        self.pipeline.fit(self.X, self.y)
+        self.pipeline.fit(self.X_train, self.y_train)
         print("training done")
 
     def evaluate(self, X_test, y_test):
@@ -109,49 +106,41 @@ class Trainer():
         blob.upload_from_filename('model.joblib')
 
 
-def get_data():
+
+
+def get_data_gcp():
     """method to get the training data (or a portion of it) from google cloud bucket"""
     df = pd.read_csv(f"gs://{BUCKET_NAME}/{BUCKET_TRAIN_DATA_PATH}")
     return df
 
 def preprocess(df):
     """method that pre-process the data"""
-    X_train = df.drop(columns=[
-        "steam_appid", "name", "top_5_tags", "nb_review", "owner_estimated",
-        "rating", "popularity",
-        "average_playtime",
-        "median_playtime"
-    ])
-    y_train = df['owner_estimated']
-    return X_train, y_train
+    X= df.drop(columns=['steam_appid', 'top_5_tags',
+                                'owner_estimated',
+                                'nb_review', 'target'
+
+                               ])
+    y = df["target"]
+    X = pd.DataFrame(X)
+    X_train, y_train, X_test, y_test = train_test_split(X,y,test_size = 0.3)
+    return X_train, y_train, X_test, y_test
 
 
 STORAGE_LOCATION = 'models/steamator/model.joblib'
 
 if __name__ == '__main__':
     # get training data from GCP bucket
-    df = get_data()
+    df = get_data_gcp()
 
     # preprocess data
-    X_train, y_train = preprocess(df)
+    X_train, y_train, X_test, y_test = preprocess(df)
 
     # train model (locally if this file was called through the run_locally command
     # or on GCP if it was called through the gcp_submit_training, in which case
     # this package is uploaded to GCP before being executed)
-    trainer = Trainer(X_train, y_train)
+    trainer = Trainer(X_train, y_train, X_test, y_test)
 
     trainer.run()
     # rmse = trainer.evaluate(X_test, y_test)
     # save trained model to GCP bucket (whether the training occured locally or on GCP)
     trainer.save_model()
-
-#if __name__ == "__main__":
-# df=get_data()
-# df = clean_data(df)
-# y=df["owner_median"]
-# X = df.drop('owner_median', axis=1)
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
-# trainer = Trainer(X_train, y_train)
-# trainer.run()
-# rmse = trainer.evaluate(X_test, y_test)
-# print(f"rmse: {rmse}")
